@@ -52,19 +52,39 @@ Yes, two changes were made after reviewing the skeleton against the starter app 
 
 2. **Added `__post_init__` validation on `Task.priority`** — The priority field accepted any string, but `priority_value()` depends on it being "low", "medium", or "high". Added a validation step that raises a `ValueError` for invalid priorities. This catches bad input at construction time rather than letting it silently produce wrong scheduling results downstream.
 
+**c. Screenshots**
+
+UML class diagram (rendered from Mermaid):
+
+![UML Diagram](screenshots/uml_diagram.png)
+
+CLI demo output (`python main.py`):
+
+![CLI Demo Output](screenshots/main_output.png)
+
+Pytest results (`python -m pytest tests/test_pawpal.py -v`):
+
+![Pytest Results](screenshots/pytest_results.png)
+
 ---
 
 ## 2. Scheduling Logic and Tradeoffs
 
 **a. Constraints and priorities**
 
-- What constraints does your scheduler consider (for example: time, priority, preferences)?
-- How did you decide which constraints mattered most?
+The scheduler considers three constraints:
+
+1. **Time budget** — The owner's `available_time_minutes` is the hard ceiling. Tasks are added greedily until the budget is exhausted; remaining tasks are skipped.
+2. **Priority** — Tasks are sorted high → medium → low before filling the budget, so critical tasks (medication, feeding) are always scheduled before optional ones (enrichment).
+3. **Duration as tiebreaker** — Within the same priority level, shorter tasks are scheduled first, maximizing the number of tasks that fit.
+
+Priority was ranked above duration because a pet owner would rather complete one critical 30-minute task than three optional 10-minute tasks. Time budget is the ultimate constraint since it cannot be exceeded.
 
 **b. Tradeoffs**
 
-- Describe one tradeoff your scheduler makes.
-- Why is that tradeoff reasonable for this scenario?
+**Conflict detection checks for time overlap but does not resolve it.** The scheduler warns that two tasks overlap (e.g., "Morning walk 07:00-07:30 overlaps with Litter box cleanup 07:15-07:25") but still schedules both. It does not automatically shift one task.
+
+This is reasonable because: (1) a pet owner may intentionally overlap tasks they can multitask (e.g., supervising a pet while food heats up), and (2) automatically rearranging times adds complexity and assumptions the scheduler shouldn't make — the owner is better positioned to resolve the conflict once warned.
 
 ---
 
