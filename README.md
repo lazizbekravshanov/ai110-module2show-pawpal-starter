@@ -1,56 +1,21 @@
 # PawPal+ (Module 2 Project)
 
-You are building **PawPal+**, a Streamlit app that helps a pet owner plan care tasks for their pet.
+**PawPal+** is a Streamlit app that helps a pet owner plan daily care tasks for their pets. It considers time constraints, task priority, and scheduling conflicts to produce an optimized daily plan with clear reasoning.
 
-## Scenario
+## Features
 
-A busy pet owner needs help staying consistent with pet care. They want an assistant that can:
+- **Owner & pet management** — Register an owner with a daily time budget, add multiple pets with species, age, and special needs
+- **Task management** — Create tasks with title, duration, priority (high/medium/low), category, scheduled time (HH:MM), and frequency (once/daily/weekly)
+- **Priority-based scheduling** — Greedy algorithm packs highest-priority tasks first within the time budget; shorter duration breaks ties
+- **Time-based sorting** — View tasks in chronological order via timeline view
+- **Filtering** — Filter tasks by pet name, completion status, or category
+- **Recurring tasks** — Daily and weekly tasks auto-generate the next occurrence (with correct due date) when marked complete
+- **Conflict detection** — Warns when tasks overlap in time without silently ignoring them
+- **Plan explanation** — Every generated plan includes a rationale for what was scheduled, what was skipped, and why
 
-- Track pet care tasks (walks, feeding, meds, enrichment, grooming, etc.)
-- Consider constraints (time available, priority, owner preferences)
-- Produce a daily plan and explain why it chose that plan
+## Demo
 
-Your job is to design the system first (UML), then implement the logic in Python, then connect it to the Streamlit UI.
-
-## What you will build
-
-Your final app should:
-
-- Let a user enter basic owner + pet info
-- Let a user add/edit tasks (duration + priority at minimum)
-- Generate a daily schedule/plan based on constraints and priorities
-- Display the plan clearly (and ideally explain the reasoning)
-- Include tests for the most important scheduling behaviors
-
-## Smarter Scheduling
-
-PawPal+ includes several algorithmic features beyond basic task listing:
-
-- **Priority-based scheduling** — Tasks are sorted high → medium → low and packed into the owner's available time budget using a greedy algorithm. Shorter tasks win ties within the same priority.
-- **Time-based sorting** — Tasks with a scheduled time (HH:MM) can be sorted chronologically. Unscheduled tasks sort last.
-- **Filtering** — Tasks can be filtered by pet name, completion status, or category across all pets.
-- **Recurring tasks** — Daily and weekly tasks automatically generate a new occurrence (with the correct next due date) when marked complete.
-- **Conflict detection** — The scheduler detects overlapping tasks based on start time and duration, and includes warnings in the daily plan without crashing or silently ignoring them.
-
-## Testing PawPal+
-
-Run the full test suite with:
-
-```bash
-python -m pytest tests/test_pawpal.py -v
-```
-
-The suite includes 30 tests covering:
-
-- **Basics** — task completion, add/remove tasks, pet name tagging
-- **Validation** — invalid priority, zero duration, bad frequency, malformed time
-- **Sorting** — chronological ordering, priority ordering, duration tiebreaker
-- **Filtering** — by pet name, completion status, category, combined filters, no-match
-- **Recurring tasks** — daily/weekly next-occurrence creation, one-time returns none, Scheduler integration
-- **Conflict detection** — overlapping times, exact same time, cross-pet conflicts
-- **Scheduling edge cases** — pet with no tasks, all tasks exceed budget, completed tasks excluded, exact budget fill
-
-**Confidence level: 4/5** — All happy paths and key edge cases are covered. Remaining gaps: stress testing with large task counts, and testing the Streamlit UI integration layer.
+![PawPal+ App Screenshot](screenshots/app_screenshot.png)
 
 ## Getting started
 
@@ -62,12 +27,45 @@ source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### Suggested workflow
+### Run the app
 
-1. Read the scenario carefully and identify requirements and edge cases.
-2. Draft a UML diagram (classes, attributes, methods, relationships).
-3. Convert UML into Python class stubs (no logic yet).
-4. Implement scheduling logic in small increments.
-5. Add tests to verify key behaviors.
-6. Connect your logic to the Streamlit UI in `app.py`.
-7. Refine UML so it matches what you actually built.
+```bash
+streamlit run app.py
+```
+
+### Run the CLI demo
+
+```bash
+python main.py
+```
+
+## Testing PawPal+
+
+```bash
+python -m pytest tests/test_pawpal.py -v
+```
+
+The suite includes **30 tests** covering:
+
+| Category | Tests | What they verify |
+|---|---|---|
+| Basics | 5 | task completion, add/remove, pet name tagging |
+| Validation | 4 | invalid priority, zero duration, bad frequency, malformed time |
+| Sorting | 3 | chronological order, priority order, duration tiebreak |
+| Filtering | 5 | by pet, status, category, combined, no-match |
+| Recurring | 4 | daily/weekly creation, one-time returns none, Scheduler integration |
+| Conflicts | 4 | overlap, no overlap, exact same time, cross-pet |
+| Edge cases | 5 | no tasks, all exceed budget, completed excluded, exact fill, plan includes conflicts |
+
+**Confidence level: 4/5**
+
+## Project structure
+
+```
+pawpal_system.py    — Logic layer (Owner, Pet, Task, Scheduler, DailyPlan)
+app.py              — Streamlit UI
+main.py             — CLI demo script
+tests/test_pawpal.py — Automated test suite (30 tests)
+uml_diagram.md      — Mermaid.js class diagram (final)
+reflection.md       — Design decisions and project reflection
+```

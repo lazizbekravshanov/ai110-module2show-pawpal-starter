@@ -92,13 +92,20 @@ This is reasonable because: (1) a pet owner may intentionally overlap tasks they
 
 **a. How you used AI**
 
-- How did you use AI tools during this project (for example: design brainstorming, debugging, refactoring)?
-- What kinds of prompts or questions were most helpful?
+AI (Claude Code) was used across every phase of this project:
+
+- **Design brainstorming** — Identifying core user actions, brainstorming classes/attributes/methods, and generating the initial Mermaid UML diagram from natural-language descriptions.
+- **Code generation** — Translating UML skeletons into Python dataclasses, then fleshing out full implementations of sorting, filtering, recurring tasks, and conflict detection.
+- **Test generation** — Drafting pytest tests from a description of desired behaviors, then expanding coverage to edge cases (empty pets, budget overflow, cross-pet conflicts).
+- **Code review** — Reviewing the skeleton for missing relationships and potential issues (e.g., `Task.category` needing a default, priority validation).
+
+The most helpful prompts were specific and scoped: "Based on my skeletons, how should the Scheduler retrieve all tasks from the Owner's pets?" worked far better than vague requests like "make the scheduler smarter."
 
 **b. Judgment and verification**
 
-- Describe one moment where you did not accept an AI suggestion as-is.
-- How did you evaluate or verify what the AI suggested?
+One key moment: the initial skeleton had `Scheduler` taking separate `owner`, `pet`, and `tasks` parameters. This would have forced the caller to manually collect tasks. I chose to redesign so that Pet holds its own tasks, Owner holds its pets, and Scheduler only takes an Owner — walking the Owner → Pets → Tasks chain internally. This decision was driven by the observation that the original design scattered responsibility and would lead to duplicated logic in both the CLI demo and the Streamlit UI.
+
+Verification was done by writing `main.py` as a CLI smoke test before connecting to Streamlit — if the output made sense in the terminal, the logic was correct. Every algorithmic feature was also verified with targeted pytest cases before being wired into the UI.
 
 ---
 
@@ -106,13 +113,25 @@ This is reasonable because: (1) a pet owner may intentionally overlap tasks they
 
 **a. What you tested**
 
-- What behaviors did you test?
-- Why were these tests important?
+The test suite covers 30 tests across 7 categories:
+
+- **Basics (5)** — Task completion, add/remove tasks, pet name tagging. These confirm the foundational data operations that everything else depends on.
+- **Validation (4)** — Invalid priority, zero duration, bad frequency, malformed time. These ensure bad input is caught at construction time rather than causing silent errors downstream.
+- **Sorting (3)** — Chronological ordering, priority ordering, duration tiebreak. These verify the scheduler's core ranking logic is correct.
+- **Filtering (5)** — By pet name, completion status, category, combined filters, no-match. These ensure the filter system works in isolation and combination.
+- **Recurring tasks (4)** — Daily next-day, weekly next-week, one-time returns none, Scheduler integration. These confirm the auto-generation logic that keeps recurring tasks alive.
+- **Conflict detection (4)** — Overlapping times, no overlap, exact same time, cross-pet conflicts. These verify that the scheduler warns appropriately without crashing.
+- **Edge cases (5)** — Pet with no tasks, all tasks exceed budget, completed tasks excluded, exact budget fill, plan includes conflicts. These catch boundary conditions that could break the greedy algorithm.
 
 **b. Confidence**
 
-- How confident are you that your scheduler works correctly?
-- What edge cases would you test next if you had more time?
+**Confidence: 4 out of 5.** All happy paths and key edge cases pass. The scheduling logic is deterministic and well-tested.
+
+Edge cases to test next with more time:
+- Large task counts (100+ tasks) to check performance
+- Tasks spanning midnight (e.g., 23:30 + 60 min)
+- Multiple pets with identical task names
+- Streamlit UI integration testing (form submission, session state persistence)
 
 ---
 
@@ -120,12 +139,12 @@ This is reasonable because: (1) a pet owner may intentionally overlap tasks they
 
 **a. What went well**
 
-- What part of this project are you most satisfied with?
+The CLI-first workflow was the best decision. Building and verifying all logic in `main.py` before touching Streamlit meant that when the UI was connected, it worked immediately — no debugging two layers at once. The clean separation between `pawpal_system.py` (logic) and `app.py` (UI) made changes in either layer safe and predictable.
 
 **b. What you would improve**
 
-- If you had another iteration, what would you improve or redesign?
+The conflict detection currently warns but doesn't help resolve conflicts. With more time, I would add a "suggest alternative time" feature that proposes the nearest non-conflicting slot. I would also add the ability to edit and delete tasks from the Streamlit UI, which currently only supports adding.
 
 **c. Key takeaway**
 
-- What is one important thing you learned about designing systems or working with AI on this project?
+The most important lesson is that **AI is most effective when the human sets clear architectural boundaries first**. When I started with a well-defined UML and class responsibilities, AI-generated code fit cleanly into the design. When prompts were vague, the suggestions were harder to integrate. Being the "lead architect" means deciding the structure and letting AI handle the implementation within those constraints — not the other way around.
