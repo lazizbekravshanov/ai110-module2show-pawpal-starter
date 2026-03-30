@@ -66,6 +66,18 @@ Pytest results (`python -m pytest tests/test_pawpal.py -v`):
 
 ![Pytest Results](screenshots/pytest_results.png)
 
+Streamlit app — Owner Info & Add Pet:
+
+![App Screenshot](screenshots/app_screenshot.png)
+
+Streamlit app — Add Task & Find Next Available Slot:
+
+![App Tasks](screenshots/app_tasks.png)
+
+Streamlit app — Filter Tasks, Build Schedule & Complete Task:
+
+![App Filters](screenshots/app_filters.png)
+
 ---
 
 ## 2. Scheduling Logic and Tradeoffs
