@@ -1,5 +1,7 @@
 """Tests for PawPal+ core logic."""
 
+import json
+import os
 import pytest
 from datetime import date, timedelta
 from pawpal_system import Owner, Pet, Task, Scheduler
@@ -391,3 +393,120 @@ def test_plan_fills_budget_exactly():
     assert len(plan.scheduled_tasks) == 2
     assert plan.skipped_tasks == []
     assert plan.total_duration == 30
+
+
+# ── Next available slot tests ─────────────────────────────────────────────
+
+def test_find_slot_in_empty_schedule():
+    """With no scheduled tasks, the first slot should be at day_start."""
+    owner = Owner("Test", 120)
+    pet = Pet("Rex", "dog", 2)
+    owner.add_pet(pet)
+
+    scheduler = Scheduler(owner)
+    slot = scheduler.find_next_available_slot(30, "07:00", "21:00")
+
+    assert slot == "07:00"
+
+
+def test_find_slot_between_existing_tasks():
+    """Should find a gap between two scheduled tasks."""
+    owner = Owner("Test", 120)
+    pet = Pet("Rex", "dog", 2)
+    owner.add_pet(pet)
+    pet.add_task(Task("Walk", 30, "high", "walk", scheduled_time="07:00"))
+    pet.add_task(Task("Feed", 15, "high", "feeding", scheduled_time="09:00"))
+
+    scheduler = Scheduler(owner)
+    # 30-min gap between 07:30 and 09:00
+    slot = scheduler.find_next_available_slot(30, "07:00", "21:00")
+
+    assert slot == "07:30"
+
+
+def test_find_slot_returns_none_when_full():
+    """Should return None when no slot of requested duration is available."""
+    owner = Owner("Test", 120)
+    pet = Pet("Rex", "dog", 2)
+    owner.add_pet(pet)
+    pet.add_task(Task("Walk", 120, "high", "walk", scheduled_time="07:00"))
+
+    scheduler = Scheduler(owner)
+    slot = scheduler.find_next_available_slot(60, "07:00", "09:00")
+
+    assert slot is None
+
+
+def test_find_slot_after_last_task():
+    """Should find a slot after all existing tasks end."""
+    owner = Owner("Test", 120)
+    pet = Pet("Rex", "dog", 2)
+    owner.add_pet(pet)
+    pet.add_task(Task("Walk", 30, "high", "walk", scheduled_time="07:00"))
+
+    scheduler = Scheduler(owner)
+    slot = scheduler.find_next_available_slot(60, "07:00", "21:00")
+
+    assert slot == "07:30"
+
+
+# ── JSON persistence tests ───────────────────────────────────────────────
+
+def test_task_round_trip_json():
+    """A Task serialized to dict and back should be equal."""
+    task = Task("Walk", 30, "high", "walk", scheduled_time="08:00",
+                frequency="daily", pet_name="Rex", due_date=date.today())
+    restored = Task.from_dict(task.to_dict())
+
+    assert restored.title == task.title
+    assert restored.duration_minutes == task.duration_minutes
+    assert restored.priority == task.priority
+    assert restored.scheduled_time == task.scheduled_time
+    assert restored.frequency == task.frequency
+    assert restored.due_date == task.due_date
+
+
+def test_owner_save_and_load_json(tmp_path):
+    """Saving an Owner to JSON and loading it back should preserve all data."""
+    path = str(tmp_path / "test_data.json")
+
+    owner = Owner("Jordan", 90)
+    pet = Pet("Mochi", "dog", 3, special_needs=["needs meds"])
+    owner.add_pet(pet)
+    pet.add_task(Task("Walk", 30, "high", "walk", scheduled_time="07:00"))
+    pet.add_task(Task("Feed", 10, "high", "feeding", frequency="daily",
+                       due_date=date.today()))
+
+    owner.save_to_json(path)
+    loaded = Owner.load_from_json(path)
+
+    assert loaded is not None
+    assert loaded.name == "Jordan"
+    assert loaded.available_time_minutes == 90
+    assert len(loaded.pets) == 1
+    assert loaded.pets[0].name == "Mochi"
+    assert loaded.pets[0].special_needs == ["needs meds"]
+    assert len(loaded.pets[0].tasks) == 2
+    assert loaded.pets[0].tasks[0].scheduled_time == "07:00"
+    assert loaded.pets[0].tasks[1].due_date == date.today()
+
+
+def test_load_from_missing_file_returns_none():
+    """Loading from a nonexistent file should return None."""
+    result = Owner.load_from_json("/tmp/nonexistent_pawpal_test.json")
+    assert result is None
+
+
+# ── Emoji formatting tests ───────────────────────────────────────────────
+
+def test_format_priority_includes_emoji():
+    """format_priority() should include the correct emoji."""
+    assert "🔴" in Task("T", 10, "high").format_priority()
+    assert "🟡" in Task("T", 10, "medium").format_priority()
+    assert "🟢" in Task("T", 10, "low").format_priority()
+
+
+def test_format_category_includes_emoji():
+    """format_category() should include the correct emoji."""
+    assert "🚶" in Task("T", 10, "high", "walk").format_category()
+    assert "💊" in Task("T", 10, "high", "meds").format_category()
