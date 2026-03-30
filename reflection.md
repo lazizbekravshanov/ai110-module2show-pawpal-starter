@@ -4,13 +4,53 @@
 
 **a. Initial design**
 
-- Briefly describe your initial UML design.
-- What classes did you include, and what responsibilities did you assign to each?
+The initial UML design uses five classes, each with a single clear responsibility:
+
+- **Owner** (dataclass) — Holds the owner's name and their daily time budget (`available_time_minutes`). This is the primary constraint the scheduler works within.
+- **Pet** (dataclass) — Stores the pet's name, species, age, and a list of special needs. Provides context so the scheduler or explanation can reference pet-specific details.
+- **Task** (dataclass) — Represents one care activity with a title, duration, priority level, and category. Includes `priority_value()` to convert the priority string into a numeric weight for sorting.
+- **Scheduler** (regular class) — The central engine. It receives an Owner, Pet, and list of Tasks, then `generate_plan()` sorts tasks by priority, fits them within the time budget, and returns a DailyPlan.
+- **DailyPlan** (dataclass) — The output. Separates tasks into `scheduled_tasks` (what fits) and `skipped_tasks` (what didn't), and `get_explanation()` produces a human-readable rationale.
+
+Relationships: Owner and Pet feed into Scheduler as constraints/context. Tasks are the inputs. Scheduler produces a DailyPlan, which references Tasks.
+
+**Core user actions identified from the scenario:**
+
+1. **Enter owner and pet info** — A user can register basic details about themselves (name, available time per day) and their pet (name, species, any special needs). This information provides the constraints the scheduler needs to build a realistic plan.
+
+2. **Add or edit care tasks** — A user can create, modify, and remove pet care tasks such as walks, feeding, medication, enrichment, and grooming. Each task has at minimum a duration and a priority level, which feed directly into the scheduling logic.
+
+3. **Generate a daily care plan** — A user can request a daily schedule that fits their available time. The system prioritizes tasks by importance, respects time constraints, and displays the resulting plan along with an explanation of why it chose that particular ordering (e.g., high-priority medication before optional enrichment).
+
+**Building blocks (classes, attributes, and methods):**
+
+1. **Owner** — Represents the pet owner and their constraints.
+   - Attributes: `name` (str), `available_time_minutes` (int — total time budget per day)
+   - Methods: `get_summary()` — returns a readable description of the owner's profile
+
+2. **Pet** — Represents the pet being cared for.
+   - Attributes: `name` (str), `species` (str — dog, cat, or other), `age` (int), `special_needs` (list[str] — e.g., "needs daily medication")
+   - Methods: `get_summary()` — returns a readable description of the pet
+
+3. **Task** — A single care activity that can be scheduled.
+   - Attributes: `title` (str), `duration_minutes` (int), `priority` (str — low, medium, or high), `category` (str — walk, feeding, meds, enrichment, grooming)
+   - Methods: `priority_value()` — converts the priority string to a numeric weight (high=3, medium=2, low=1) so the scheduler can sort and compare tasks
+
+4. **Scheduler** — The engine that builds a plan from tasks and constraints.
+   - Attributes: `owner` (Owner), `pet` (Pet), `tasks` (list[Task])
+   - Methods: `generate_plan()` — sorts tasks by priority (highest first), fits them into the owner's available time budget, and returns a DailyPlan object
+
+5. **DailyPlan** — The output schedule for a given day.
+   - Attributes: `scheduled_tasks` (list[Task] — ordered tasks that fit), `skipped_tasks` (list[Task] — tasks that didn't fit in the time budget), `total_duration` (int — sum of scheduled task durations)
+   - Methods: `get_explanation()` — produces a human-readable rationale for why each task was included or skipped and why they appear in that order
 
 **b. Design changes**
 
-- Did your design change during implementation?
-- If yes, describe at least one change and why you made it.
+Yes, two changes were made after reviewing the skeleton against the starter app and potential edge cases:
+
+1. **Added a default value for `Task.category`** — The original UML required a category for every task, but the starter app's UI doesn't collect one. Changed `category` to default to `"general"` so tasks can be created without specifying a category, matching the existing UI contract.
+
+2. **Added `__post_init__` validation on `Task.priority`** — The priority field accepted any string, but `priority_value()` depends on it being "low", "medium", or "high". Added a validation step that raises a `ValueError` for invalid priorities. This catches bad input at construction time rather than letting it silently produce wrong scheduling results downstream.
 
 ---
 
